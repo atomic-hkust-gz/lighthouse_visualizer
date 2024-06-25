@@ -1,0 +1,113 @@
+import pygame
+import serial
+import re
+import math
+
+# 初始化 Pygame
+pygame.init()
+
+# 设置窗口大小
+window_length =800
+window_height = 600
+window_size = (window_length, window_height)
+screen = pygame.display.set_mode(window_size)
+pygame.display.set_caption("控制黑色圆形")
+
+# 设置串口
+serial_port = "COM15"  # 根据实际情况修改
+baud_rate = 38400
+
+try:
+    ser = serial.Serial(serial_port, baud_rate)
+except serial.SerialException as e:
+    print(f"无法打开串口 {serial_port}: {e}")
+    pygame.quit()
+    exit(1)
+
+# 圆形初始位置
+circle_pos = [100, 100]
+circle_radius = 20
+
+# 正则表达式匹配 "A_X: 50, A_Y: 200, B_X: 100, B_Y: 150"
+pattern = re.compile(r"A_X:\s*(\d+),\s*A_Y:\s*(\d+),\s*B_X:\s*(\d+),\s*B_Y:\s*(\d+)")
+
+# 设置字体
+font = pygame.font.SysFont(None, 36)
+
+# 计算实际位置需要的参数
+lighthouse_height = 450  # 单位mm
+lighthouse_freq = 120  # 120Hz
+lighthouse_period = 1 / lighthouse_freq  # 120Hz~=0.00833s
+lighthouse_angular_velocity = 2 * math.pi * lighthouse_freq
+resolution = 10000000  # @10M,1s= 10,000,000 ticks
+
+
+def get_position(time_x, time_y, height_lh, resolution):
+
+    time_motor_ax = time_x / resolution
+    time_motor_ay = time_y / resolution
+    theta_ax = lighthouse_angular_velocity * time_motor_ax  # now in radians
+    theta_ay = lighthouse_angular_velocity * time_motor_ay
+    max_side = height_lh / math.cos(theta_ax)
+    x_p = max_side * math.sin(theta_ax)
+    y_p = max_side * math.sin(theta_ay)
+    return x_p, y_p
+
+
+# 主循环
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # 从串口读取数据
+    if ser.in_waiting > 0:
+        try:
+            line = ser.readline().decode("utf-8").strip()
+            print(f"Received line: {line}")  # 打印接收到的行
+            match = pattern.match(line)
+            if match:
+                time_motor_ax = int(match.group(1))  # convert ticks(@10M) to seconds(s)
+                time_motor_ay = int(match.group(2))  # convert ticks(@10M) to seconds(s)
+                circle_pos[0], circle_pos[1] = get_position(
+                    time_motor_ax, time_motor_ay, lighthouse_height, resolution
+                )
+                circle_pos[0] = round(window_length - circle_pos[0],3)
+                circle_pos[1] = round(window_height - circle_pos[1],3)
+
+                print(
+                    f"Updated circle position to: {circle_pos}"
+                )  # 打印更新后的圆形位置
+            else:
+                print("No match found for the line")  # 如果没有匹配成功
+        except Exception as e:
+            print(f"读取串口数据时出错: {e}")
+
+    # 绘制白色背景
+    screen.fill((255, 255, 255))
+
+    # 绘制黑色圆形
+    pygame.draw.circle(screen, (0, 0, 0), circle_pos, circle_radius)
+
+    # 创建文本表面
+    coord_text = font.render(f"X: {circle_pos[0]}, Y: {circle_pos[1]}", True, (0, 0, 0))
+
+    # 获取文本表面的矩形
+    text_rect = coord_text.get_rect()
+
+    # 将矩形位置设置为窗口左上角
+    text_rect.topleft = (10, 10)
+
+    # 绘制文本
+    screen.blit(coord_text, text_rect)
+
+    # 更新显示
+    pygame.display.flip()
+
+    # 控制帧率
+    pygame.time.Clock().tick(60)
+
+# 关闭串口和 Pygame
+ser.close()
+pygame.quit()
