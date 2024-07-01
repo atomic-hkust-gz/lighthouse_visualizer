@@ -28,6 +28,33 @@ except serial.SerialException as e:
 circle_pos = [100, 100]
 circle_radius = 20
 
+# 创建背景图像
+background = pygame.Surface(window_size)
+
+# 绘制白色背景
+background.fill((255, 255, 255))
+
+# 网格颜色
+cm_grid_color = (139, 0, 0)  # 深红色
+mm_grid_color = (211, 211, 211)  # 浅灰色
+
+# 1 cm = 37.7952755906 pixels (assuming 96 DPI)
+dpi = 96
+cm_size = dpi/2.54
+mm_size = cm_size / 10
+
+# 绘制1mm网格到背景
+for x in range(0, window_size[0], int(mm_size)):
+    pygame.draw.line(background, mm_grid_color, (x, 0), (x, window_size[1]))
+for y in range(0, window_size[1], int(mm_size)):
+    pygame.draw.line(background, mm_grid_color, (0, y), (window_size[0], y))
+
+# 绘制1cm网格到背景
+for x in range(0, window_size[0], int(cm_size)):
+    pygame.draw.line(background, cm_grid_color, (x, 0), (x, window_size[1]))
+for y in range(0, window_size[1], int(cm_size)):
+    pygame.draw.line(background, cm_grid_color, (0, y), (window_size[0], y))
+
 # 正则表达式匹配 "A_X: 50, A_Y: 200, B_X: 100, B_Y: 150"
 pattern = re.compile(r"A_X:\s*(\d+),\s*A_Y:\s*(\d+),\s*B_X:\s*(\d+),\s*B_Y:\s*(\d+)")
 
@@ -84,8 +111,8 @@ while running:
         except Exception as e:
             print(f"读取串口数据时出错: {e}")
 
-    # 绘制白色背景
-    screen.fill((255, 255, 255))
+    # 绘制背景图像
+    screen.blit(background, (0, 0))
 
     # 绘制黑色圆形
     pygame.draw.circle(screen, (0, 0, 0), circle_pos, circle_radius)
