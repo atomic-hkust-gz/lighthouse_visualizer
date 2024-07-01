@@ -7,7 +7,7 @@ import math
 pygame.init()
 
 # 设置窗口大小
-window_length =800
+window_length = 800
 window_height = 600
 window_size = (window_length, window_height)
 screen = pygame.display.set_mode(window_size)
@@ -73,8 +73,8 @@ while running:
                 circle_pos[0], circle_pos[1] = get_position(
                     time_motor_ax, time_motor_ay, lighthouse_height, resolution
                 )
-                circle_pos[0] = round(window_length - circle_pos[0],3)
-                circle_pos[1] = round(window_height - circle_pos[1],3)
+                circle_pos[0] = round(window_length - circle_pos[0], 3)
+                circle_pos[1] = round(window_height - circle_pos[1], 3)
 
                 print(
                     f"Updated circle position to: {circle_pos}"
