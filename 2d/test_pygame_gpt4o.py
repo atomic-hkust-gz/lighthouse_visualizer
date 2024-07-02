@@ -34,8 +34,8 @@ circle_pos = [100, 100]
 circle_radius = 20
 
 # 创建背景图像
-background_size = (1600, 1200)  # 有时候想想，多大才算大呀？
-background = pygame.Surface(window_size)
+background_size = (3200, 2400)  # 有时候想想，多大才算大呀？
+background = pygame.Surface(background_size)
 
 # 绘制白色背景
 background.fill((255, 255, 255))
@@ -44,18 +44,71 @@ background.fill((255, 255, 255))
 cm_grid_color = (139, 0, 0)  # 深红色
 mm_grid_color = (211, 211, 211)  # 浅灰色
 
+# 设置字体
+font = pygame.font.SysFont(None, 36)
+small_font = pygame.font.SysFont(None, 18)
 
 # 绘制1mm网格到背景
-for x in range(0, window_size[0], int(mm_size)):
-    pygame.draw.line(background, mm_grid_color, (x, 0), (x, window_size[1]))
-for y in range(0, window_size[1], int(mm_size)):
-    pygame.draw.line(background, mm_grid_color, (0, y), (window_size[0], y))
+for x in range(0, background_size[0], int(mm_size)):
+    pygame.draw.line(background, mm_grid_color, (x, 0), (x, background_size[1]))
+for y in range(0, background_size[1], int(mm_size)):
+    pygame.draw.line(background, mm_grid_color, (0, y), (background_size[0], y))
 
 # 绘制1cm网格到背景
-for x in range(0, window_size[0], int(cm_size)):
-    pygame.draw.line(background, cm_grid_color, (x, 0), (x, window_size[1]))
-for y in range(0, window_size[1], int(cm_size)):
-    pygame.draw.line(background, cm_grid_color, (0, y), (window_size[0], y))
+for x in range(0, background_size[0], int(cm_size)):
+    pygame.draw.line(background, cm_grid_color, (x, 0), (x, background_size[1]))
+for y in range(0, background_size[1], int(cm_size)):
+    pygame.draw.line(background, cm_grid_color, (0, y), (background_size[0], y))
+
+# 绘制X和Y坐标轴
+axis_color = (0, 0, 0)  # 黑色
+# # Y轴
+# pygame.draw.line(
+#     background,
+#     axis_color,
+#     (background_size[0] // 2, 0),
+#     (background_size[0] // 2, background_size[1]),
+#     2,
+# )
+# # X轴
+# pygame.draw.line(
+#     background,
+#     axis_color,
+#     (0, background_size[1] // 2),
+#     (background_size[0], background_size[1] // 2),
+#     2,
+# )
+
+# 在坐标轴上标注刻度
+for i in range(0, background_size[0], int(cm_size)):
+    if i != background_size[0] // 2:
+        pygame.draw.line(
+            background,
+            axis_color,
+            (i, background_size[1] // 2 - 5),
+            (i, background_size[1] // 2 + 5),
+        )
+        label = small_font.render(
+            str((i - background_size[0] // 2) // int(cm_size)), True, axis_color
+        )
+        background.blit(
+            label, (i - label.get_width() // 2, background_size[1] // 2 + 10)
+        )
+
+for i in range(0, background_size[1], int(cm_size)):
+    if i != background_size[1] // 2:
+        pygame.draw.line(
+            background,
+            axis_color,
+            (background_size[0] // 2 - 5, i),
+            (background_size[0] // 2 + 5, i),
+        )
+        label = small_font.render(
+            str((background_size[1] // 2 - i) // int(cm_size)), True, axis_color
+        )
+        background.blit(
+            label, (background_size[0] // 2 + 10, i - label.get_height() // 2)
+        )
 
 # 设置初始缩放比例和偏移量
 scale = 1.0
@@ -65,9 +118,6 @@ last_mouse_pos = (0, 0)
 
 # 正则表达式匹配 "A_X: 50, A_Y: 200, B_X: 100, B_Y: 150"
 pattern = re.compile(r"A_X:\s*(\d+),\s*A_Y:\s*(\d+),\s*B_X:\s*(\d+),\s*B_Y:\s*(\d+)")
-
-# 设置字体
-font = pygame.font.SysFont(None, 36)
 
 # 计算实际位置需要的参数
 lighthouse_height = 450  # 单位mm
@@ -139,7 +189,9 @@ while running:
             print(f"读取串口数据时出错: {e}")
 
     # 缩放背景图像
-    scaled_background = pygame.transform.smoothscale(background, (int(background_size[0] * scale), int(background_size[1] * scale)))
+    scaled_background = pygame.transform.smoothscale(
+        background, (int(background_size[0] * scale), int(background_size[1] * scale))
+    )
 
     # 计算偏移后的位置
     offset_x = offset[0]
@@ -150,18 +202,44 @@ while running:
     screen.fill((255, 255, 255))  # 清屏
     screen.blit(scaled_background, (offset_x, offset_y))
 
+    # 绘制贴靠右边框和下边框的坐标轴刻度
+    for i in range(0, window_size[0], int(cm_size)):
+        # 计算实际坐标
+        real_x = (i - offset_x) / scale / cm_size
+        pygame.draw.line(
+            screen, axis_color, (i, window_size[1] - 5), (i, window_size[1] + 5)
+        )
+        label = small_font.render(f"{real_x:.1f}", True, axis_color)
+        screen.blit(label, (i - label.get_width() // 2, window_size[1] - 20))
+
+    for i in range(0, window_size[1], int(cm_size)):
+        # 计算实际坐标
+        real_y = (window_size[1] - i - offset_y) / scale / cm_size
+        pygame.draw.line(
+            screen, axis_color, (window_size[0] - 5, i), (window_size[0] + 5, i)
+        )
+        label = small_font.render(f"{real_y:.1f}", True, axis_color)
+        screen.blit(label, (window_size[0] - 50, i - label.get_height() // 2))
+
     # 计算圆形在缩放和偏移后的位置
     scaled_circle_pos = [
-        offset_x + circle_pos[0] * scale,
-        offset_y + circle_pos[1] * scale
+        offset_x + circle_pos[0] * scale * mm_size,
+        offset_y + circle_pos[1] * scale * mm_size,
     ]
 
     # 绘制黑色圆形
     # pygame.draw.circle(screen, (0, 0, 0), circle_pos, circle_radius)
-    pygame.draw.circle(screen, (0, 0, 0), (int(scaled_circle_pos[0]), int(scaled_circle_pos[1])), int(circle_radius * scale))
+    pygame.draw.circle(
+        screen,
+        (0, 0, 0),
+        (int(scaled_circle_pos[0]), int(scaled_circle_pos[1])),
+        int(circle_radius * scale),
+    )
 
     # 创建文本表面
-    coord_text = font.render(f"X: {circle_pos[0]}, Y: {circle_pos[1]}", True, (0, 0, 0))
+    coord_text = font.render(
+        f"X: {circle_pos[0]}, Y: {circle_pos[1]} (mm)", True, (0, 0, 0)
+    )
 
     # 获取文本表面的矩形
     text_rect = coord_text.get_rect()
