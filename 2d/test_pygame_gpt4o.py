@@ -14,7 +14,7 @@ screen = pygame.display.set_mode(window_size)
 pygame.display.set_caption("控制黑色圆形")
 
 # 设置串口
-serial_port = "COM15"  # 根据实际情况修改
+serial_port = "COM18"  # 根据实际情况修改
 baud_rate = 38400
 
 try:
@@ -24,11 +24,17 @@ except serial.SerialException as e:
     pygame.quit()
     exit(1)
 
+# 1 cm = 37.7952755906 pixels (assuming 96 DPI)
+dpi = 96
+cm_size = dpi / 2.54
+mm_size = cm_size / 10
+
 # 圆形初始位置
 circle_pos = [100, 100]
 circle_radius = 20
 
 # 创建背景图像
+background_size = (1600, 1200)  # 有时候想想，多大才算大呀？
 background = pygame.Surface(window_size)
 
 # 绘制白色背景
@@ -38,10 +44,6 @@ background.fill((255, 255, 255))
 cm_grid_color = (139, 0, 0)  # 深红色
 mm_grid_color = (211, 211, 211)  # 浅灰色
 
-# 1 cm = 37.7952755906 pixels (assuming 96 DPI)
-dpi = 96
-cm_size = dpi/2.54
-mm_size = cm_size / 10
 
 # 绘制1mm网格到背景
 for x in range(0, window_size[0], int(mm_size)):
@@ -54,6 +56,12 @@ for x in range(0, window_size[0], int(cm_size)):
     pygame.draw.line(background, cm_grid_color, (x, 0), (x, window_size[1]))
 for y in range(0, window_size[1], int(cm_size)):
     pygame.draw.line(background, cm_grid_color, (0, y), (window_size[0], y))
+
+# 设置初始缩放比例和偏移量
+scale = 1.0
+offset = [0, 0]
+dragging = False
+last_mouse_pos = (0, 0)
 
 # 正则表达式匹配 "A_X: 50, A_Y: 200, B_X: 100, B_Y: 150"
 pattern = re.compile(r"A_X:\s*(\d+),\s*A_Y:\s*(\d+),\s*B_X:\s*(\d+),\s*B_Y:\s*(\d+)")
@@ -87,6 +95,25 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # 左键按下，开始拖动
+                dragging = True
+                last_mouse_pos = event.pos
+            elif event.button == 4:  # 滚轮向上，放大
+                scale *= 1.1
+            elif event.button == 5:  # 滚轮向下，缩小
+                scale *= 0.9
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:  # 左键松开，停止拖动
+                dragging = False
+        elif event.type == pygame.MOUSEMOTION:
+            if dragging:
+                mouse_pos = event.pos
+                dx = mouse_pos[0] - last_mouse_pos[0]
+                dy = mouse_pos[1] - last_mouse_pos[1]
+                offset[0] += dx
+                offset[1] += dy
+                last_mouse_pos = mouse_pos
 
     # 从串口读取数据
     if ser.in_waiting > 0:
@@ -111,11 +138,27 @@ while running:
         except Exception as e:
             print(f"读取串口数据时出错: {e}")
 
+    # 缩放背景图像
+    scaled_background = pygame.transform.smoothscale(background, (int(background_size[0] * scale), int(background_size[1] * scale)))
+
+    # 计算偏移后的位置
+    offset_x = offset[0]
+    offset_y = offset[1]
+
     # 绘制背景图像
-    screen.blit(background, (0, 0))
+    # screen.blit(background, (0, 0))
+    screen.fill((255, 255, 255))  # 清屏
+    screen.blit(scaled_background, (offset_x, offset_y))
+
+    # 计算圆形在缩放和偏移后的位置
+    scaled_circle_pos = [
+        offset_x + circle_pos[0] * scale,
+        offset_y + circle_pos[1] * scale
+    ]
 
     # 绘制黑色圆形
-    pygame.draw.circle(screen, (0, 0, 0), circle_pos, circle_radius)
+    # pygame.draw.circle(screen, (0, 0, 0), circle_pos, circle_radius)
+    pygame.draw.circle(screen, (0, 0, 0), (int(scaled_circle_pos[0]), int(scaled_circle_pos[1])), int(circle_radius * scale))
 
     # 创建文本表面
     coord_text = font.render(f"X: {circle_pos[0]}, Y: {circle_pos[1]}", True, (0, 0, 0))
