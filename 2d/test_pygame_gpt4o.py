@@ -11,10 +11,10 @@ window_length = 800
 window_height = 600
 window_size = (window_length, window_height)
 screen = pygame.display.set_mode(window_size)
-pygame.display.set_caption("控制黑色圆形")
+pygame.display.set_caption("2D lighthouse visualizer")
 
 # 设置串口
-serial_port = "COM18"  # 根据实际情况修改
+serial_port = "COM15"  # 根据实际情况修改
 baud_rate = 38400
 
 try:
@@ -62,6 +62,7 @@ for y in range(0, background_size[1], int(cm_size)):
 
 # 绘制X和Y坐标轴
 axis_color = (0, 0, 0)  # 黑色
+axis_num_color = (110, 152, 88)
 # # Y轴
 # pygame.draw.line(
 #     background,
@@ -89,7 +90,7 @@ for i in range(0, background_size[0], int(cm_size)):
             (i, background_size[1] // 2 + 5),
         )
         label = small_font.render(
-            str((i - background_size[0] // 2) // int(cm_size)), True, axis_color
+            str((i - background_size[0] // 2) // int(cm_size)), True, axis_num_color
         )
         background.blit(
             label, (i - label.get_width() // 2, background_size[1] // 2 + 10)
@@ -104,7 +105,7 @@ for i in range(0, background_size[1], int(cm_size)):
             (background_size[0] // 2 + 5, i),
         )
         label = small_font.render(
-            str((background_size[1] // 2 - i) // int(cm_size)), True, axis_color
+            str((background_size[1] // 2 - i) // int(cm_size)), True, axis_num_color
         )
         background.blit(
             label, (background_size[0] // 2 + 10, i - label.get_height() // 2)
