@@ -34,7 +34,7 @@ circle_pos = [100, 100]
 circle_radius = 20
 
 # 创建背景图像
-background_size = (3200, 2400)  # 有时候想想，多大才算大呀？
+background_size = (3600, 3600)  # 有时候想想，多大才算大呀？
 background = pygame.Surface(background_size)
 
 # 绘制白色背景
@@ -121,22 +121,25 @@ last_mouse_pos = (0, 0)
 pattern = re.compile(r"A_X:\s*(\d+),\s*A_Y:\s*(\d+),\s*B_X:\s*(\d+),\s*B_Y:\s*(\d+)")
 
 # 计算实际位置需要的参数
-lighthouse_height = 450  # 单位mm
-lighthouse_freq = 120  # 120Hz
+lighthouse_height = 550  # 单位mm
+lighthouse_freq = 120  # 120Hz for sync light
 lighthouse_period = 1 / lighthouse_freq  # 120Hz~=0.00833s
 lighthouse_angular_velocity = 2 * math.pi * lighthouse_freq
 resolution = 10000000  # @10M,1s= 10,000,000 ticks
 
 
+# 当前版本的角度计算方法是一种更易理解的形式，即时间/周期*pi。
+# 获得角度后，根据简单的三角函数方法就能计算得到相应的X，Y相对坐标。
 def get_position(time_x, time_y, height_lh, resolution):
 
-    time_motor_ax = time_x / resolution
+    time_motor_ax = time_x / resolution  # seconds
     time_motor_ay = time_y / resolution
-    theta_ax = lighthouse_angular_velocity * time_motor_ax  # now in radians
-    theta_ay = lighthouse_angular_velocity * time_motor_ay
-    max_side = height_lh / math.cos(theta_ax)
-    x_p = max_side * math.sin(theta_ax)
-    y_p = max_side * math.sin(theta_ay)
+    theta_ax = time_motor_ax / lighthouse_period * math.pi  # now in radians
+    theta_ay = time_motor_ay / lighthouse_period * math.pi
+    max_side_x = height_lh / math.sin(theta_ax)
+    max_side_y = height_lh / math.sin(theta_ay)
+    x_p = max_side_x * math.cos(theta_ax)
+    y_p = max_side_y * math.cos(theta_ay)
     return x_p, y_p
 
 
@@ -178,8 +181,8 @@ while running:
                 circle_pos[0], circle_pos[1] = get_position(
                     time_motor_ax, time_motor_ay, lighthouse_height, resolution
                 )
-                circle_pos[0] = round(window_length - circle_pos[0], 3)
-                circle_pos[1] = round(window_height - circle_pos[1], 3)
+                circle_pos[0] = round(window_length + circle_pos[0], 3)
+                circle_pos[1] = round(window_height + circle_pos[1], 3)
 
                 print(
                     f"Updated circle position to: {circle_pos}"
@@ -215,7 +218,7 @@ while running:
 
     for i in range(0, window_size[1], int(cm_size)):
         # 计算实际坐标
-        real_y = (window_size[1] - i - offset_y) / scale / cm_size
+        real_y = (i - offset_y) / scale / cm_size
         pygame.draw.line(
             screen, axis_color, (window_size[0] - 5, i), (window_size[0] + 5, i)
         )
